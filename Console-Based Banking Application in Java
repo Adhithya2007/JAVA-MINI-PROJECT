@@ -1,0 +1,243 @@
+Design and implement a console-based Banking application that supports account creation,
+transactions, and transfers using OOP in Java.
+Requirements:
+1. Create at least 4 classes:
+o Account – base class with accountNo, holderName, balance, openedDate.
+o SavingsAccount – interestRate, minBalance rules.
+o CurrentAccount – overdraftLimit, serviceCharge rules.
+o BankService – manages accounts and transactions.
+2. Each class must include:
+o ≥4 instance/static variables.
+o A constructor to initialize values.
+o ≥5 methods (deposit(), withdraw(), transfer(), miniStatement(), getters/setters).
+3. Demonstrate OOPS Concepts:
+o Inheritance → SavingsAccount & CurrentAccount extend Account.
+o Method Overloading → transfer() with/without remark or scheduled date.
+o Method Overriding → different withdraw()/fee logic per account type.
+o Polymorphism → treat all accounts as Account in collections.
+o Encapsulation → private balance with controlled access.
+4. Write a Main class (BankAppMain) to test:
+o Create accounts and list them.
+o Perform deposits, withdrawals, transfers.
+o Show mini statements and account summaries.
+o Print daily transaction report.
+
+SOURCE CODE:
+package Javaprojects;
+
+import java.util.*;
+
+public abstract class Account {
+    protected String accountNo;
+    protected String holderName;
+    protected double balance;
+    protected Date openedDate;
+
+    // Transaction history
+    protected List<String> transactions = new ArrayList<>();
+
+    public Account(String accountNo, String holderName, double balance, Date openedDate) {
+        this.accountNo = accountNo;
+        this.holderName = holderName;
+        this.balance = balance;
+        this.openedDate = openedDate;
+        transactions.add("Account opened with balance: " + balance);
+    }
+
+    // Common methods
+    public void deposit(double amount) {
+        if (amount > 0) {
+            balance += amount;
+            transactions.add("Deposited: " + amount + " | Balance: " + balance);
+            System.out.println("Deposit successful. New Balance: " + balance);
+        } else {
+            System.out.println("Invalid deposit amount!");
+        }
+    }
+
+    // Abstract method → Overridden in subclasses
+    public abstract void withdraw(double amount);
+
+    // Method overloading (transfer with/without remark)
+    public void transfer(Account toAccount, double amount) {
+        transfer(toAccount, amount, "No Remark");
+    }
+
+    public void transfer(Account toAccount, double amount, String remark) {
+        if (this.balance >= amount) {
+            this.balance -= amount;
+            toAccount.balance += amount;
+            transactions.add("Transferred " + amount + " to " + toAccount.accountNo + " [" + remark + "]");
+            toAccount.transactions.add("Received " + amount + " from " + this.accountNo + " [" + remark + "]");
+            System.out.println("Transfer successful: " + amount + " to " + toAccount.holderName);
+        } else {
+            System.out.println("Insufficient funds for transfer.");
+        }
+    }
+
+    // Mini statement
+    public void miniStatement() {
+        System.out.println("\n--- Mini Statement for " + holderName + " ---");
+        for (String t : transactions) {
+            System.out.println(t);
+        }
+    }
+
+    // Getters
+    public String getAccountNo() { return accountNo; }
+    public String getHolderName() { return holderName; }
+    public double getBalance() { return balance; }
+    public Date getOpenedDate() { return openedDate; }
+}
+public class CurrentAccount extends Account {
+    private double overdraftLimit;
+    private double serviceCharge;
+
+    public CurrentAccount(String accountNo, String holderName, double balance, Date openedDate,
+                          double overdraftLimit, double serviceCharge) {
+        super(accountNo, holderName, balance, openedDate);
+        this.overdraftLimit = overdraftLimit;
+        this.serviceCharge = serviceCharge;
+    }
+
+    @Override
+    public void withdraw(double amount) {
+        if (balance + overdraftLimit >= amount) {
+            balance -= amount;
+            transactions.add("Withdrew: " + amount + " | Balance: " + balance);
+            System.out.println("Withdrawal successful. New Balance: " + balance);
+            if (balance < 0) {
+                balance -= serviceCharge;
+                transactions.add("Service charge applied: " + serviceCharge + " | Balance: " + balance);
+            }
+        } else {
+            System.out.println("Withdrawal denied. Overdraft limit exceeded!");
+        }
+    }
+}
+public class BankService {
+    private List<Account> accounts = new ArrayList<>();
+
+    public void addAccount(Account acc) {
+        accounts.add(acc);
+    }
+
+    public void listAccounts() {
+        System.out.println("\n--- List of Accounts ---");
+        for (Account a : accounts) {
+            System.out.println(a.getAccountNo() + " | " + a.getHolderName() + " | Balance: " + a.getBalance());
+        }
+    }
+
+    public void dailyReport() {
+        System.out.println("\n=== Daily Transaction Report ===");
+        for (Account a : accounts) {
+            a.miniStatement();
+        }
+    }
+}
+
+public class BankAppMain {
+    public static void main(String[] args) {
+        BankService bank = new BankService();
+
+        // Create accounts
+        SavingsAccount sa = new SavingsAccount("S101", "Alice", 5000, new Date(), 3.5, 1000);
+        CurrentAccount ca = new CurrentAccount("C202", "Bob", 2000, new Date(), 1000, 50);
+
+        bank.addAccount(sa);
+        bank.addAccount(ca);
+
+        bank.listAccounts();
+
+        // Perform transactions
+        sa.deposit(2000);
+        sa.withdraw(1000);
+        sa.applyInterest();
+
+        ca.withdraw(2500); // goes into overdraft
+        ca.deposit(1000);
+
+        // Transfer
+        sa.transfer(ca, 1500, "Rent Payment");
+
+        // Mini statements
+        sa.miniStatement();
+        ca.miniStatement();
+
+        // Daily report
+        bank.dailyReport();
+    }
+}
+public class SavingsAccount extends Account {
+    private double interestRate;
+    private double minBalance;
+
+    public SavingsAccount(String accountNo, String holderName, double balance, Date openedDate,
+                          double interestRate, double minBalance) {
+        super(accountNo, holderName, balance, openedDate);
+        this.interestRate = interestRate;
+        this.minBalance = minBalance;
+    }
+
+    @Override
+    public void withdraw(double amount) {
+        if (balance - amount >= minBalance) {
+            balance -= amount;
+            transactions.add("Withdrew: " + amount + " | Balance: " + balance);
+            System.out.println("Withdrawal successful. New Balance: " + balance);
+        } else {
+            System.out.println("Cannot withdraw. Minimum balance rule violated!");
+        }
+    }
+
+    public void applyInterest() {
+        double interest = balance * interestRate / 100;
+        balance += interest;
+        transactions.add("Interest added: " + interest + " | Balance: " + balance);
+    }
+}
+
+OUTPUT:
+
+-- List of Accounts ---
+S101 | Alice | Balance: 5000.0
+C202 | Bob | Balance: 2000.0
+
+Deposit successful. New Balance: 7000.0
+Withdrawal successful. New Balance: 6000.0
+
+Withdrawal successful. New Balance: -500.0
+Service charge applied: 50.0 | Balance: -550.0
+Deposit successful. New Balance: 450.0
+Transfer successful: 1500.0 to Bob
+
+--- Mini Statement for Alice ---
+Account opened with balance: 5000.0
+Deposited: 2000.0 | Balance: 7000.0
+Withdrew: 1000.0 | Balance: 6000.0
+Interest added: 210.0 | Balance: 6210.0
+Transferred 1500.0 to C202 [Rent Payment]
+
+--- Mini Statement for Bob ---
+Account opened with balance: 2000.0
+Withdrew: 2500.0 | Balance: -500.0
+Service charge applied: 50.0 | Balance: -550.0
+Deposited: 1000.0 | Balance: 450.0
+Received 1500.0 from S101 [Rent Payment]
+
+=== Daily Transaction Report ===
+
+--- Mini Statement for Alice ---
+Account opened with balance: 5000.0
+Deposited: 2000.0 | Balance: 7000.0
+Withdrew: 1000.0 | Balance: 6000.0
+Interest added: 210.0 | Balance: 6210.0
+Transferred 1500.0 to C202 [Rent Payment]
+
+--- Mini Statement for Bob ---
+Account opened with balance: 2000.0
+Withdrew: 2500.0 | Balance: -500.0
+Service charge applied: 50.0 | Balance: -550.0
+Deposited: 1000.0 | Balance: 450.0
+Received 1500.0 from S101 [Rent Payment]
